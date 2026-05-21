@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Forgot Password</title>
+  <link rel="stylesheet" href="style1.css">
+  <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+</head>
+<body>
+  <div class="container">
+    <div class="form-box" style="width:100%;">
+      <form id="forgotForm" action="#">
+        <h1>Forgot Password</h1>
+        <p>Please enter your registered email to reset your password.</p>
+        
+        <div class="input-box">
+          <input type="email" id="forgotEmail" placeholder="Enter Email" required>
+          <i class='bx bxs-envelope'></i>
+        </div>
+        
+        <button type="submit" class="btn">Send Reset Link</button>
+        <p id="forgotMessage" class="msg"></p>
+        
+        <div class="submit">
+          <a href="index.html" class="back">Back to Login</a>
+        </div>
+      </form>
+    </div>
+  </div>
+  
+  <script>
+    document.getElementById("forgotForm").addEventListener("submit", function(e){
+      e.preventDefault();
+      
+      const email = document.getElementById("forgotEmail").value;
+      const msg = document.getElementById("forgotMessage");
+
+      // Simulating backend email verification
+      if(email.trim() === ""){
+        msg.textContent = "Please enter your email.";
+        msg.className = "msg error";
+      } else {
+        msg.textContent = "A reset link has been sent to " + email;
+        msg.className = "msg success";
+      }
+    });
+  </script>
+</body>
+</html>

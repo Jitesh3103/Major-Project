@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>3D CCTV Camera with Cursor Movement</title>
+    <style>
+        body { margin: 0; overflow: hidden; }
+        canvas { display: block; }
+    </style>
+</head>
+<body>
+    <!-- Load Three.js from CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.156.0/build/three.min.js"></script>
+    <script>
+        // Create basic scene, camera, renderer
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({antialias: true});
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // Grey material
+        const greyMaterial = new THREE.MeshStandardMaterial({ color: 0x808080 });
+
+        // Camera body (cylinder)
+        const bodyGeometry = new THREE.CylinderGeometry(0.5, 0.5, 2, 32);
+        const cameraBody = new THREE.Mesh(bodyGeometry, greyMaterial);
+        scene.add(cameraBody);
+
+        // Camera lens (sphere)
+        const lensGeometry = new THREE.SphereGeometry(0.5, 32, 32);
+        const lensMaterial = new THREE.MeshStandardMaterial({ color: 0x222222 });
+        const cameraLens = new THREE.Mesh(lensGeometry, lensMaterial);
+        cameraLens.position.set(0, 1, 0.8);
+        // Attach lens to body
+        cameraBody.add(cameraLens);
+
+        // Lighting
+        const light = new THREE.DirectionalLight(0xffffff, 1);
+        light.position.set(5, 10, 7);
+        scene.add(light);
+
+        camera.position.z = 5;
+
+        // Cursor movement: rotate camera body
+        document.addEventListener('mousemove', function(event) {
+            const x = (event.clientX / window.innerWidth) * 2 - 1;
+            const y = -(event.clientY / window.innerHeight) * 2 + 1;
+            cameraBody.rotation.y = x * Math.PI;      // Horizontal rotation
+            cameraBody.rotation.x = y * Math.PI / 4;  // Vertical tilt
+        });
+
+        function animate() {
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera);
+        }
+        animate();
+    </script>
+</body>
+</html>

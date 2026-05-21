@@ -1,0 +1,192 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CCTV Attribute Extraction System</title>
+  <link rel="stylesheet" href="style.css"> 
+   
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+  
+</head>
+<body>
+  <!-- Loader -->
+  <div id="loader">
+    <div id="loader-icon"></div>
+    <div id="loader-text">Loading System...</div>
+  </div>
+
+  <!-- Pages -->
+  <section id="home" class="active">
+    <div class="home-container">
+      <div class="home-title">
+        <h2>XTract</h2>
+        <p>Detect and analyze attributes like clothing, height, gender, age and more from live or uploaded CCTV footage.<br> Please go through the instructions before using </p>
+        <div class="buttons">
+          <input type="file" id="videoFile" accept="video/*" />
+          <button class="btn" id="btnUpload">Upload & Process</button>
+          <input type="text" id="videoPath" placeholder="Or enter video path on server (optional)" style="margin-left:10px; width: 280px;" />
+          <button class="btn" id="btnStartPath">Start From Path</button>
+          <button class="btn" id="btnLive">Start Live (iVCam)</button>
+          <button class="btn" id="btnStop">Stop</button>
+          <button class="btn" id="btnReport">Generate Report</button>
+        </div>
+      
+          <div id="status" ></div>
+        </div>
+      </div>
+      <div class="cctv-preview">
+        <video id="demo" src="/static/demo.mp4" controls autoplay muted loop playsinline style="width:100%; border-radius:12px; box-shadow:0 0 30px rgba(155,125,255,0.6)"></video>
+      </div>
+    </div>
+  </section>
+
+
+  <div id="live-preview" >
+    <div class="content-box">
+      <h2>Live/Uploaded Preview</h2>
+      <img id="stream" src="" alt="Stream will appear here after starting." decoding="async" loading="eager" style="width:100%; border-radius:12px; box-shadow:0 0 30px rgba(155,125,255,0.6)" />
+    </div>
+  </div>
+
+  <script>
+    function showPage(pageId) {
+      document.querySelectorAll('section').forEach(section => {
+        section.classList.remove('active');
+      });
+      document.getElementById(pageId).classList.add('active');
+    }
+
+    // Loader fade out
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        document.getElementById('loader').style.display = 'none';
+      }, 1500);
+    });
+  </script>
+  <script>
+    const statusEl = document.getElementById('status');
+    const streamEl = document.getElementById('stream');
+    let streamingActive = false;
+    function setStreamSrc() {
+      streamEl.src = '/video_feed?ts=' + Date.now();
+    }
+    streamEl.addEventListener('error', () => {
+      if (streamingActive) {
+        setStatus('Stream disconnected. Reconnecting...');
+        setTimeout(setStreamSrc, 1000);
+      }
+    });
+    setInterval(() => {
+      if (streamingActive) setStreamSrc();
+    }, 60000);
+
+    function setStatus(msg, isError=false) {
+      statusEl.style.color = isError ? '#ff8080' : '#9b7dff';
+      statusEl.textContent = msg;
+    }
+
+    async function uploadAndStart() {
+      const fileInput = document.getElementById('videoFile');
+      if (!fileInput.files || fileInput.files.length === 0) {
+        setStatus('Select a video file first.', true);
+        return;
+      }
+      const fd = new FormData();
+      fd.append('video', fileInput.files[0]);
+      try {
+        setStatus('Uploading and starting processing...');
+        const res = await fetch('/upload', { method: 'POST', body: fd });
+        const data = await res.json();
+        if (!res.ok) {
+          setStatus(data.message || 'Upload failed.', true);
+          return;
+        }
+        setStatus('Processing started. Streaming...');
+        streamingActive = true;
+        setStreamSrc();
+      } catch (e) {
+        setStatus('Upload error: ' + e.message, true);
+      }
+    }
+
+    async function startFromPath() {
+      const vp = document.getElementById('videoPath').value.trim();
+      if (!vp) {
+        setStatus('Enter a valid server path to a video.', true);
+        return;
+      }
+      const fd = new FormData();
+      fd.append('video_path', vp);
+      try {
+        setStatus('Starting from path...');
+        const res = await fetch('/start', { method: 'POST', body: fd });
+        const txt = await res.text();
+        if (!res.ok) {
+          setStatus('Start error: ' + txt, true);
+          return;
+        }
+        setStatus('Processing started. Streaming...');
+        streamingActive = true;
+        setStreamSrc();
+      } catch (e) {
+        setStatus('Error: ' + e.message, true);
+      }
+    }
+
+    async function startLive() {
+      const fd = new FormData();
+      fd.append('video_path', '0'); // default webcam index for iVCam
+      try {
+        setStatus('Starting live webcam...');
+        const res = await fetch('/start', { method: 'POST', body: fd });
+        const txt = await res.text();
+        if (!res.ok) {
+          setStatus('Live start error: ' + txt, true);
+          return;
+        }
+        setStatus('Live started. Streaming...');
+        streamingActive = true;
+        setStreamSrc();
+      } catch (e) {
+        setStatus('Error: ' + e.message, true);
+      }
+    }
+
+    async function stopProcessing() {
+      try {
+        setStatus('Stopping...');
+        await fetch('/stop', { method: 'POST' });
+        setStatus('Stopped.');
+        streamingActive = false;
+        streamEl.src = '';
+      } catch (e) {
+        setStatus('Stop error: ' + e.message, true);
+      }
+    }
+
+    async function generateReport() {
+      try {
+        setStatus('Generating report...');
+        const res = await fetch('/generate_report', { method: 'POST' });
+        if (!res.ok) {
+          const txt = await res.text();
+          setStatus('Report error: ' + txt, true);
+          return;
+        }
+        window.open('/download/report.pdf', '_blank');
+        setStatus('Report generated.');
+      } catch (e) {
+        setStatus('Report error: ' + e.message, true);
+      }
+    }
+
+    document.getElementById('btnUpload').addEventListener('click', uploadAndStart);
+    document.getElementById('btnStartPath').addEventListener('click', startFromPath);
+    document.getElementById('btnLive').addEventListener('click', startLive);
+    document.getElementById('btnStop').addEventListener('click', stopProcessing);
+    document.getElementById('btnReport').addEventListener('click', generateReport);
+  </script>
+</body>
+</html>
